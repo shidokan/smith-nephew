@@ -1,0 +1,2235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smith+Nephew Windchill PLM CI/CD — Before & After Modernization</title>
+<meta name="description" content="Azure DevOps CI/CD pipeline modernization for Smith+Nephew Windchill PLM application — from Classic Release Pipelines to YAML + Octopus Deploy + Bicep IaC. A case study by John Carlo Cueva.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  /* Light theme — engineering documentation aesthetic */
+  --bg: #FAFBFC;
+  --bg-soft: #F1F4F7;
+  --bg-section: #E8ECF1;
+  --surface: #FFFFFF;
+  --surface-elevated: #FDFDFE;
+
+  /* Slate blue — primary ink, distinct from navy / indigo */
+  --ink: #0F172A;
+  --ink-strong: #1E293B;
+  --ink-muted: #475569;
+  --ink-faded: #94A3B8;
+  --ink-dim: #CBD5E1;
+
+  --rule: rgba(15, 23, 42, 0.1);
+  --rule-soft: rgba(15, 23, 42, 0.05);
+  --rule-strong: rgba(15, 23, 42, 0.15);
+
+  /* Electric teal accent — distinct from mosiac teal */
+  --accent-900: #134E4A;
+  --accent-700: #0F766E;
+  --accent-500: #14B8A6;
+  --accent-300: #5EEAD4;
+  --accent-100: #CCFBF1;
+  --accent-50: #F0FDFA;
+
+  /* Coral — highlight for "before/old" elements */
+  --coral-700: #BE3A1D;
+  --coral-500: #F26A4F;
+  --coral-100: #FDDED4;
+  --coral-50: #FEF1EC;
+
+  /* Lavender — for "new/added" elements in after diagram */
+  --lavender-700: #6D28D9;
+  --lavender-500: #8B5CF6;
+  --lavender-100: #EDE9FE;
+  --lavender-50: #F5F3FF;
+
+  /* Octopus green — homage to OD brand */
+  --octopus-700: #0F8060;
+  --octopus-500: #2DAB7F;
+  --octopus-100: #D4F0E2;
+
+  --font-display: 'Manrope', -apple-system, system-ui, sans-serif;
+  --font-body: 'Manrope', -apple-system, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 2rem; }
+
+/* === Header === */
+.site-head {
+  border-bottom: 1px solid var(--rule);
+  padding: 1.125rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  background: rgba(250, 251, 252, 0.92);
+}
+.site-head-row { display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
+.brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.brand::before {
+  content: "";
+  display: inline-block;
+  width: 1.625rem;
+  height: 0.375rem;
+  background: linear-gradient(90deg, var(--accent-500) 0%, var(--accent-700) 100%);
+  border-radius: 2px;
+}
+.brand span {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-faded);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+}
+.site-nav { display: flex; gap: 1.5rem; font-size: 0.875rem; align-items: center; }
+.site-nav a {
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+  font-weight: 500;
+}
+.site-nav a:hover { color: var(--accent-700); }
+
+/* === Hero === */
+.hero { padding: 5.5rem 0 2rem; position: relative; }
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-700);
+  margin-bottom: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.4rem 0.875rem;
+  background: var(--accent-50);
+  border-radius: 999px;
+  border: 1px solid var(--accent-100);
+  font-weight: 500;
+}
+.kicker .dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  background: var(--accent-500);
+  border-radius: 50%;
+  display: inline-block;
+}
+.hero h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.5rem, 5.5vw, 4.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  max-width: 24ch;
+  margin-bottom: 1.75rem;
+}
+.hero h1 .accent {
+  background: linear-gradient(90deg, var(--accent-700) 0%, var(--lavender-700) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+}
+.hero-lede {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 1.1875rem;
+  line-height: 1.65;
+  color: var(--ink-muted);
+  max-width: 64ch;
+  margin-bottom: 2.5rem;
+}
+.byline {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  max-width: 50rem;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  flex-wrap: wrap;
+}
+.byline strong { color: var(--ink); font-weight: 600; }
+.byline .sep { color: var(--ink-faded); }
+.byline .mono { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--ink-faded); }
+.byline .tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  background: var(--accent-50);
+  color: var(--accent-700);
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--accent-100);
+}
+
+/* === Stat band === */
+.stat-band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-top: 3rem;
+  padding: 1.75rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+@media (max-width: 800px) {
+  .stat-band { grid-template-columns: repeat(2, 1fr); }
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.stat-number {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.875rem;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  line-height: 1;
+}
+.stat-number .small {
+  font-size: 0.65em;
+  color: var(--ink-faded);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faded);
+  font-weight: 500;
+}
+
+/* === Section === */
+section { padding: 3rem 0; }
+.section-label {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+.section-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--accent-700);
+  font-weight: 600;
+  background: var(--accent-50);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--accent-100);
+}
+.section-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.875rem;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.section-sub {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  color: var(--ink-faded);
+  margin-left: auto;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* === Before / After Toggle === */
+.toggle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+.toggle {
+  display: inline-flex;
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 4px;
+  gap: 2px;
+}
+.toggle button {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 5px;
+  font-weight: 500;
+}
+.toggle button:hover { color: var(--ink); }
+.toggle button.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.toggle button.active.before { color: var(--coral-700); }
+.toggle button.active.after { color: var(--accent-700); }
+.toggle button.active.split { color: var(--lavender-700); }
+
+.hint {
+  background: var(--accent-50);
+  border: 1px solid var(--accent-100);
+  padding: 0.75rem 1.125rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.hint strong {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-700);
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  background: var(--surface);
+  border-radius: 4px;
+  border: 1px solid var(--accent-100);
+  flex-shrink: 0;
+}
+
+/* === Diagram frames === */
+.diagram-frame {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 2rem;
+  border-radius: 12px;
+}
+.diagram-frame.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.diagram-frame.split > div { padding: 2rem; }
+.diagram-frame.split > div:first-child { border-right: 1px solid var(--rule); }
+@media (max-width: 1000px) {
+  .diagram-frame.split { grid-template-columns: 1fr; }
+  .diagram-frame.split > div:first-child {
+    border-right: none;
+    border-bottom: 1px solid var(--rule);
+  }
+}
+.diagram-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faded);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+.diagram-label.before { color: var(--coral-700); }
+.diagram-label.after { color: var(--accent-700); }
+.diagram-label .label-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  text-transform: none;
+}
+.diagram-label .label-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+}
+.diagram-label.before .label-pill {
+  background: var(--coral-50);
+  color: var(--coral-700);
+  border: 1px solid var(--coral-100);
+}
+.diagram-label.after .label-pill {
+  background: var(--accent-50);
+  color: var(--accent-700);
+  border: 1px solid var(--accent-100);
+}
+
+.svg-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.svg-wrap svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* SVG node base */
+.svg-th { font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.svg-ts { font-family: var(--font-mono); font-size: 10px; font-weight: 400; }
+.svg-arr { stroke: var(--ink-muted); stroke-width: 1.25; fill: none; }
+.svg-container { fill: none; stroke: var(--ink-faded); stroke-width: 0.75; stroke-dasharray: 4 3; }
+.svg-region-label { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-faded); letter-spacing: 0.08em; font-weight: 500; }
+
+.node-group { cursor: pointer; transition: filter 0.15s ease, transform 0.15s ease; }
+.node-group:hover { filter: brightness(0.97); }
+.node-group:hover rect { stroke-width: 2; }
+
+/* Before-diagram colors (warmer, older look) */
+.c-coral rect { fill: var(--coral-50); stroke: var(--coral-500); stroke-width: 1; }
+.c-coral .svg-th { fill: var(--coral-700); }
+.c-coral .svg-ts { fill: var(--coral-700); }
+.c-amber rect { fill: #FEF3C7; stroke: #D97706; stroke-width: 1; }
+.c-amber .svg-th { fill: #78350F; }
+.c-amber .svg-ts { fill: #B45309; }
+.c-azure rect { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1; }
+.c-azure .svg-th { fill: #1E3A8A; }
+.c-azure .svg-ts { fill: #1D4ED8; }
+
+/* After-diagram colors (cooler, modern) */
+.c-teal rect { fill: var(--accent-50); stroke: var(--accent-500); stroke-width: 1; }
+.c-teal .svg-th { fill: var(--accent-900); }
+.c-teal .svg-ts { fill: var(--accent-700); }
+.c-teal-deep rect { fill: var(--accent-100); stroke: var(--accent-700); stroke-width: 1.5; }
+.c-teal-deep .svg-th { fill: var(--accent-900); }
+.c-teal-deep .svg-ts { fill: var(--accent-700); }
+.c-lavender rect { fill: var(--lavender-50); stroke: var(--lavender-500); stroke-width: 1; }
+.c-lavender .svg-th { fill: var(--lavender-700); }
+.c-lavender .svg-ts { fill: var(--lavender-700); }
+.c-octopus rect { fill: var(--octopus-100); stroke: var(--octopus-500); stroke-width: 1; }
+.c-octopus .svg-th { fill: #0A4E3B; }
+.c-octopus .svg-ts { fill: var(--octopus-700); }
+.c-gray rect { fill: var(--bg-section); stroke: var(--ink-faded); stroke-width: 1; }
+.c-gray .svg-th { fill: var(--ink); }
+.c-gray .svg-ts { fill: var(--ink-muted); }
+
+/* "New in 2026" badge */
+.new-badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  fill: var(--lavender-700);
+  letter-spacing: 0.06em;
+}
+
+/* === Changes Grid === */
+.changes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+@media (max-width: 1000px) {
+  .changes-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .changes-grid { grid-template-columns: 1fr; }
+}
+.change-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1.5rem;
+  border-radius: 12px;
+}
+.change-card-head {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot.kept { background: var(--ink-faded); }
+.dot.renamed { background: #D97706; }
+.dot.added { background: var(--lavender-500); }
+.dot.dropped { background: var(--coral-500); }
+.change-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.change-list li {
+  font-size: 0.875rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.change-list .old {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink-faded);
+  text-decoration: line-through;
+  text-decoration-color: var(--coral-500);
+  display: block;
+  margin-bottom: 0.125rem;
+}
+.change-list .new {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+.change-list .note {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  margin-top: 0.25rem;
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+/* === Pipeline === */
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.pipeline-step {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  border-bottom: 1px solid var(--rule);
+  align-items: start;
+  transition: background 0.15s;
+}
+.pipeline-step:last-child { border-bottom: none; }
+.pipeline-step:hover { background: var(--bg-soft); }
+.pipeline-num {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--accent-700);
+  background: var(--accent-50);
+  padding: 0.625rem 0.875rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent-100);
+  height: fit-content;
+  min-width: 3.25rem;
+  text-align: center;
+}
+.pipeline-body { display: flex; flex-direction: column; gap: 0.5rem; }
+.pipeline-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.pipeline-tech {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-700);
+  font-weight: 600;
+}
+.pipeline-desc {
+  font-size: 0.9375rem;
+  color: var(--ink-muted);
+  line-height: 1.6;
+  max-width: 65ch;
+  margin-top: 0.125rem;
+}
+.pipeline-desc code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--bg-soft);
+  padding: 0.1rem 0.375rem;
+  border-radius: 3px;
+  color: var(--accent-700);
+  border: 1px solid var(--rule);
+}
+.pipeline-status {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.pipeline-status.new { background: var(--lavender-50); color: var(--lavender-700); border: 1px solid var(--lavender-100); }
+.pipeline-status.changed { background: var(--accent-50); color: var(--accent-700); border: 1px solid var(--accent-100); }
+.pipeline-status.kept { background: var(--bg-section); color: var(--ink-muted); border: 1px solid var(--rule); }
+
+/* === Decision Cards === */
+.decisions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+@media (max-width: 800px) {
+  .decisions-grid { grid-template-columns: 1fr; }
+}
+.decision-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1.75rem;
+  border-radius: 12px;
+  transition: all 0.18s;
+}
+.decision-card:hover {
+  border-color: var(--accent-100);
+  box-shadow: 0 4px 16px rgba(20, 184, 166, 0.06);
+}
+.decision-q {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  letter-spacing: -0.015em;
+  color: var(--accent-700);
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+.decision-a {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--ink-muted);
+}
+.decision-a code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--bg-soft);
+  padding: 0.1rem 0.375rem;
+  border-radius: 3px;
+  color: var(--accent-700);
+  border: 1px solid var(--rule);
+}
+.decision-a strong { color: var(--ink); font-weight: 600; }
+
+/* === Capability cards === */
+.capabilities-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+@media (max-width: 1000px) {
+  .capabilities-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .capabilities-grid { grid-template-columns: 1fr; }
+}
+.cap-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-top: 3px solid var(--accent-500);
+  transition: all 0.18s;
+}
+.cap-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--rule-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+.cap-card.lavender { border-top-color: var(--lavender-500); }
+.cap-card.octopus { border-top-color: var(--octopus-500); }
+.cap-card.coral { border-top-color: var(--coral-500); }
+.cap-icon {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--accent-700);
+  margin-bottom: 0.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--accent-50);
+  border: 1px solid var(--accent-100);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cap-card.lavender .cap-icon { color: var(--lavender-700); background: var(--lavender-50); border-color: var(--lavender-100); }
+.cap-card.octopus .cap-icon { color: var(--octopus-700); background: var(--octopus-100); border-color: var(--octopus-100); }
+.cap-card.coral .cap-icon { color: var(--coral-700); background: var(--coral-50); border-color: var(--coral-100); }
+.cap-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+}
+.cap-desc {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+/* === Tech stack === */
+.stack-table {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.stack-table tr { border-bottom: 1px solid var(--rule); }
+.stack-table tr:last-child { border-bottom: none; }
+.stack-table tr:hover { background: var(--bg-soft); }
+.stack-table td {
+  padding: 0.875rem 1.5rem;
+  vertical-align: top;
+  font-size: 0.9375rem;
+}
+.stack-table td:first-child {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faded);
+  width: 25%;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.stack-table td:nth-child(2) {
+  color: var(--ink);
+}
+.stack-table td:nth-child(3) {
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+.stack-table code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--accent-50);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  color: var(--accent-700);
+  border: 1px solid var(--accent-100);
+}
+
+/* === Gallery === */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+@media (max-width: 700px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+}
+.gallery-item {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  transition: all 0.18s;
+}
+.gallery-item:hover {
+  border-color: var(--rule-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+.gallery-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #FFF;
+  border-bottom: 1px solid var(--rule);
+}
+.gallery-caption {
+  padding: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.gallery-caption strong {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.25rem;
+  font-size: 0.9375rem;
+  letter-spacing: -0.015em;
+}
+
+/* === About === */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 3rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .about-grid { grid-template-columns: 1fr; }
+}
+.about-aside {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faded);
+  padding-top: 1rem;
+  border-top: 3px solid var(--accent-500);
+  line-height: 2;
+}
+.about-aside strong {
+  color: var(--accent-700);
+  font-weight: 600;
+}
+.about-body p {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--ink-muted);
+  margin-bottom: 1.25rem;
+}
+.about-body p:first-child {
+  font-size: 1.1875rem;
+  color: var(--ink);
+}
+.about-body strong { color: var(--ink); font-weight: 600; }
+
+/* === Modal === */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  backdrop-filter: blur(4px);
+}
+.modal-backdrop.open { opacity: 1; pointer-events: all; }
+.modal-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(600px, 100%);
+  background: var(--surface);
+  z-index: 101;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.32, 0.96);
+  overflow-y: auto;
+  border-left: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -16px 0 32px rgba(0,0,0,0.08);
+}
+.modal-panel.open { transform: translateX(0); }
+.modal-header {
+  padding: 2rem 2.5rem 1.5rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg-soft);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.modal-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 2rem;
+  height: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.15s;
+  font-family: var(--font-body);
+}
+.modal-close:hover { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.modal-category {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-700);
+  margin-bottom: 0.75rem;
+  background: var(--accent-50);
+  padding: 0.25rem 0.625rem;
+  border-radius: 4px;
+  display: inline-block;
+  font-weight: 600;
+  border: 1px solid var(--accent-100);
+}
+.modal-category.before {
+  color: var(--coral-700);
+  background: var(--coral-50);
+  border-color: var(--coral-100);
+}
+.modal-category.new {
+  color: var(--lavender-700);
+  background: var(--lavender-50);
+  border-color: var(--lavender-100);
+}
+.modal-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.625rem;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  line-height: 1.2;
+  padding-right: 3rem;
+}
+.modal-title .alt {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink-faded);
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-top: 0.375rem;
+}
+.modal-summary {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  margin-top: 1rem;
+}
+.modal-body { padding: 2rem 2.5rem 3rem; }
+.modal-block { margin-bottom: 2rem; }
+.modal-block-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-700);
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  font-weight: 600;
+}
+.modal-block p {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+}
+.modal-block ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.modal-block li {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ink);
+  padding-left: 1.25rem;
+  position: relative;
+}
+.modal-block li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent-500);
+  font-weight: 600;
+}
+.modal-block code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background: var(--accent-50);
+  padding: 0.1rem 0.375rem;
+  border-radius: 3px;
+  color: var(--accent-700);
+  border: 1px solid var(--accent-100);
+}
+.modal-block strong { color: var(--ink); font-weight: 600; }
+
+/* === Footer === */
+footer {
+  border-top: 1px solid var(--rule);
+  padding: 3rem 0;
+  margin-top: 4rem;
+  background: var(--bg-soft);
+}
+.foot-grid { display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap; }
+.foot-brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+.foot-grid p { font-size: 0.875rem; color: var(--ink-muted); }
+.foot-grid .mono { font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-faded); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero > * { animation: fadeUp 0.6s ease-out both; }
+.hero > *:nth-child(1) { animation-delay: 0.05s; }
+.hero > *:nth-child(2) { animation-delay: 0.15s; }
+.hero > *:nth-child(3) { animation-delay: 0.25s; }
+.hero > *:nth-child(4) { animation-delay: 0.35s; }
+.hero > *:nth-child(5) { animation-delay: 0.45s; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-soft); }
+::-webkit-scrollbar-thumb { background: var(--ink-dim); border: 3px solid var(--bg-soft); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-faded); }
+
+@media (max-width: 640px) {
+  .wrap { padding: 0 1.25rem; }
+  .site-nav { display: none; }
+  section { padding: 2rem 0; }
+  .hero { padding: 3rem 0 2rem; }
+  .modal-panel { width: 100%; }
+  .modal-header, .modal-body { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .pipeline-step { grid-template-columns: 1fr; gap: 0.75rem; padding: 1.25rem; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+/* =====================================================================
+   SERVICES — for both before and after diagrams
+   ===================================================================== */
+const SERVICES = {
+  // BEFORE diagram services
+  eclipse: {
+    name: "Eclipse IDE",
+    altName: "developer environment",
+    category: "Before · 2022 · developer tooling",
+    era: "before",
+    summary: "The original developer environment for the Windchill team — Eclipse IDE handling Java code editing, PTC Windchill workspace management, and direct push to Azure Repos.",
+    role: "The team standardized on Eclipse IDE because PTC Windchill ships a Java-based extensibility model and an Eclipse-based development workspace. Developers worked in Eclipse against the local Windchill installation, then pushed Java customizations and PLM configuration to Azure Repos. The choice was practical — match the toolchain PTC itself ships rather than fight it.",
+    talking: [
+      "Eclipse aligned with PTC's reference development environment for Windchill",
+      "Java-heavy codebase made Eclipse's JDT the natural choice over VS Code at the time",
+      "Direct integration with Azure Repos via the Azure Repos Eclipse plugin",
+      "Modern equivalent — VS Code with PTC Windchill extensions is now viable for many workflows"
+    ]
+  },
+  azurerepos: {
+    name: "Azure Repos",
+    altName: "Git source control",
+    category: "Source control",
+    era: "both",
+    summary: "Git repositories hosted in Azure DevOps. Held the .NET solution files for Windchill customizations, infrastructure scripts, and pipeline definitions.",
+    role: "Every push from a developer's Eclipse workstation triggers the downstream pipeline. Branch protection on main, pull-request review requirements, and Azure Boards work-item linking were all enforced via repo policies. In the modern architecture, this is still the source of truth — what changes is what lives in the repo (now: YAML pipelines, Bicep templates, Terraform modules) and how downstream automation consumes it.",
+    talking: [
+      "Azure Repos was the natural Git host given the Azure DevOps-native pipeline stack",
+      "GitHub Enterprise is the obvious alternative if the org standardizes on GitHub",
+      "Branch policies + required reviewers were the primary code-quality gate",
+      "Commit-to-build linking via Azure Boards gave full traceability from work item to deployment"
+    ]
+  },
+  azureboards: {
+    name: "Azure Boards",
+    altName: "work item tracking",
+    category: "Work tracking",
+    era: "both",
+    summary: "User Story / Task tracking for the Windchill team. Provided traceability from work item to commit to build to deployment.",
+    role: "Every commit linked back to an Azure Boards user story or task. The release pipeline could show, for any deployed version, the exact list of work items it included. For a regulated medical-device company like Smith+Nephew this traceability isn't optional — ISO 13485 and FDA 21 CFR Part 11 essentially require it.",
+    talking: [
+      "Work item linking is the audit trail — critical for regulated industries",
+      "Same pattern works in the 2026 version, no reason to change",
+      "Azure Boards · Jira · Linear are interchangeable here; pick what the team uses"
+    ]
+  },
+  buildpipeline: {
+    name: "Azure Build Pipeline (Classic)",
+    altName: "GUI-configured CI",
+    category: "Before · 2022 · CI",
+    era: "before",
+    summary: "The Classic (GUI-configured) build pipeline. Ran Get Source → Install Tools → Build Solution → Run Tests → Package Artifacts → Publish Artifacts in a linear sequence.",
+    role: "Classic pipelines were the dominant Azure DevOps pattern in 2022 — configuration was point-and-click in the GUI, with each task picked from a dropdown. Worked well for simple flows like this one, but accumulated complexity meant configuration drifted between pipelines, harder to review in pull requests (no diff), and harder to template across projects. Each pipeline change was effectively undocumented unless someone manually exported the JSON.",
+    talking: [
+      "GUI-configured pipelines were standard in 2018-2022 — most teams started here",
+      "Limitations: no version control on the pipeline itself, no diff on changes, hard to template",
+      "Modern path: YAML pipelines that live next to the application code in the same repo",
+      "Microsoft hasn't formally deprecated Classic but new builds should use YAML"
+    ]
+  },
+  releasepipeline: {
+    name: "Azure Release Pipeline (Classic)",
+    altName: "Dev → QA → Prod stages",
+    category: "Before · 2022 · CD",
+    era: "before",
+    summary: "Classic Release Pipeline orchestrating deployment across Dev, QA, and Prod stages with manual approval gates. Production deployment used slot swaps for zero-downtime.",
+    role: "The Release Pipeline was the heart of the original CD design. Triggered automatically on successful build, it deployed to the Dev stage, then to QA after gate approval, then to Prod after a second gate. The Prod stage used Azure App Service deployment slots — deploy to staging slot, validate, then swap with production. That slot-swap pattern was genuinely well-designed for zero-downtime release, and the modern architecture preserves it.",
+    talking: [
+      "Slot swaps in Prod = the right zero-downtime pattern — preserved in the modern architecture",
+      "Manual approval gates between stages — fine for low-frequency PLM releases",
+      "Classic Release Pipelines have known limitations: GUI-only config, no pipeline-as-code, awkward to template",
+      "Modern path: YAML multi-stage pipelines, or move the release stage entirely to Octopus Deploy"
+    ]
+  },
+  azureartifacts: {
+    name: "Azure Artifacts",
+    altName: "package storage",
+    category: "Before · 2022 · artifact storage",
+    era: "before",
+    summary: "Storage for build outputs — packaged artifacts (JARs, ZIPs, NuGet) that the Release Pipeline pulled and deployed to the target environments.",
+    role: "Build pipeline published artifacts here, Release pipeline pulled them. Simple producer/consumer pattern. Kept deployable JARs in repos (per the design note in the original diagram) was the pragmatic call given Windchill's deployment model. In the modern architecture, Azure Artifacts is still useful but Octopus Deploy can host its own built-in package repository, depending on where you draw the boundary.",
+    talking: [
+      "Still works in 2026 — Azure Artifacts hasn't been deprecated",
+      "Alternative: Octopus Deploy's built-in package repository if releases move to OD",
+      "JFrog Artifactory or GitHub Packages are common alternatives",
+      "Storage cost is negligible compared to compute"
+    ]
+  },
+  katalon: {
+    name: "Katalon TestOps",
+    altName: "automated UI/API testing",
+    category: "Quality automation",
+    era: "both",
+    summary: "Automated UI and API test orchestration. Tests ran against deployed Web Apps after each stage; results posted back to Azure DevOps for traceability.",
+    role: "Katalon ran end-to-end automated test suites against the deployed Windchill Web Apps in Dev and QA. Results posted back to Azure DevOps and linked to the originating user stories. There was a real version constraint at the time — Katalon's Azure DevOps integration only supported version 8.0 and above; the team was on 7.5 at the start, meaning a planned upgrade was needed before full integration worked.",
+    talking: [
+      "Katalon Studio + TestOps gave a low-friction way to test PLM web UIs without Selenium scaffolding",
+      "Version constraint at original design time: Katalon 7.5, needed 8.0+ for Azure DevOps native integration",
+      "Modern alternatives: Playwright (web), Postman/Newman (API), or staying with Katalon — all viable",
+      "Key principle: every deployment runs the test suite automatically, results linked to work items"
+    ]
+  },
+  appservice: {
+    name: "Azure App Service",
+    altName: "Web Apps · Dev/QA/Prod",
+    category: "Runtime",
+    era: "both",
+    summary: "Azure App Service hosting the Windchill Web App frontends across Dev, QA, and Prod. Production used staging+production slots for zero-downtime swaps.",
+    role: "App Service was the right call for Windchill's web UI tier — managed platform, easy slot swaps, integrated with Azure DevOps deployments out of the box. The slot-swap pattern (deploy to staging slot, validate, swap with prod) gave zero-downtime production releases. In the modern architecture, the App Service is provisioned by Bicep IaC rather than created in the portal — that's the meaningful change, not the service itself.",
+    talking: [
+      "App Service is still the right runtime for this web-app workload in 2026",
+      "Slot swaps remain the cleanest zero-downtime pattern for App Service",
+      "Modern improvement: provision via Bicep IaC, not Portal — full infrastructure-as-code",
+      "Alternative for new builds: Azure Container Apps if containerization is preferred"
+    ]
+  },
+
+  // AFTER diagram (new) services
+  vscode: {
+    name: "VS Code",
+    altName: "with Azure + Windchill extensions",
+    category: "After · 2026 · developer tooling",
+    era: "after",
+    summary: "VS Code with Azure-aware extensions has largely displaced Eclipse for new development, including for many Windchill workflows. Native Git integration, better Azure DevOps integration, lower memory footprint.",
+    role: "For modern Windchill customization work that doesn't strictly require Eclipse's JDT, VS Code is preferred. Better Azure Repos integration, integrated YAML pipeline editing, Bicep extension for IaC, GitHub Copilot for AI-assisted code generation. Some Windchill workflows (Java-heavy customization, debugging into the platform) still benefit from Eclipse — the team should support both rather than mandate one.",
+    talking: [
+      "VS Code's ecosystem (extensions, AI tools, Live Share) has overtaken Eclipse for new development",
+      "Eclipse still has the edge for deep Java debugging into PTC Windchill internals",
+      "Most teams: support both, let developers choose per task",
+      "GitHub Copilot integration cuts pipeline / Bicep / Terraform writing time by 30-50%"
+    ]
+  },
+  yamlpipeline: {
+    name: "YAML Multi-Stage Pipeline",
+    altName: "azure-pipelines.yml",
+    category: "After · 2026 · CI/CD",
+    era: "after",
+    new: true,
+    summary: "Replaces the Classic GUI-configured Build + Release Pipelines with a single YAML pipeline that lives in the repo, versions with the code, and reviews in pull requests.",
+    role: "The modern Azure DevOps pattern is a single azure-pipelines.yml file in the repo defining all stages — Build, Test, Deploy to Dev, Deploy to QA, Deploy to Prod. Changes to the pipeline are pull requests, reviewed and diffed like code. Reusable templates let multiple projects share the same pipeline structure. This is the most impactful single change from the 2022 architecture — it makes the pipeline a first-class engineering artifact rather than tribal configuration knowledge.",
+    talking: [
+      "YAML pipelines are versioned with the code — every change is a reviewed PR",
+      "Templates and includes let you share pipeline logic across multiple repos",
+      "Parameters and variable groups make multi-environment promotion clean",
+      "Pipeline-as-code is non-negotiable for any modern CI/CD architecture",
+      "Visual pipeline view in Azure DevOps still works, but the source of truth is the YAML"
+    ],
+    compliance: "For regulated industries (medical device, FinTech, healthcare), pipeline-as-code is the audit story. Every change to deployment logic is a versioned, reviewed, traceable artifact — exactly what SOC 2, ISO 13485, and PCI auditors want to see."
+  },
+  bicep: {
+    name: "Bicep IaC",
+    altName: "Azure resource provisioning",
+    category: "After · 2026 · infrastructure-as-code",
+    era: "after",
+    new: true,
+    summary: "Bicep templates provision the entire Azure environment — App Service Plan, App Service, deployment slots, App Insights, networking — as part of the same pipeline that deploys the application.",
+    role: "The 2022 architecture had a real gap: the App Service itself wasn't infrastructure-as-code. Someone created it in the portal, and that creation wasn't reproducible. Bicep closes that gap. The same YAML pipeline that builds and tests now also provisions or updates the Azure infrastructure on each run. Environments become disposable and reproducible — spin up a fresh QA environment for a feature branch in 10 minutes, tear it down when the PR merges.",
+    talking: [
+      "One-click provisioning — the entire environment described as code, provisioned in a single pipeline run",
+      "Bicep is Microsoft's preferred IaC for Azure (vs. ARM JSON or 3rd-party Terraform)",
+      "For Azure-only workloads: Bicep. For multi-cloud: Terraform. For hybrid Azure-only-but-might-go-multi: Terraform with the AzureRM provider.",
+      "Reusable Bicep modules become the org's reference architecture library",
+      "Pull requests can preview infrastructure changes with what-if before merge"
+    ],
+    compliance: "FDA validated systems require change-controlled infrastructure. Bicep + pipeline = every infrastructure change is a PR, every PR is reviewed, every deployment is traceable. The validation engineer's job gets easier, not harder."
+  },
+  octopus: {
+    name: "Octopus Deploy",
+    altName: "release orchestration",
+    category: "After · 2026 · release management",
+    era: "after",
+    new: true,
+    summary: "Handles the release and operations layer that Classic Release Pipelines used to handle — but with first-class variable management, Tenant deployments, Runbooks, and richer environment visualization.",
+    role: "Azure Build Pipelines (now YAML) continue to handle CI. Octopus Deploy takes over CD and Runbooks. Octopus's strengths over Classic Release Pipelines: variable management across many environments and tenants becomes first-class, Runbooks let you script operational tasks (\"one-click\" production restarts, DB refresh, certificate rotation) with proper RBAC, Tenant deployments let you deploy the same release process across many customer instances with one configuration, and the deployment dashboard gives a single view of what's running where. Particularly valuable for B2B SaaS with many customer environments — exactly the GTreasury / Ripple use case the JD describes.",
+    talking: [
+      "Octopus + Azure DevOps is a common, well-tested pattern — they integrate cleanly",
+      "Tenant deployments are the killer feature for multi-customer B2B SaaS",
+      "Runbooks turn ops tasks into auditable, RBAC-controlled one-click actions",
+      "Variable management at scale is genuinely better in Octopus than in YAML variable groups",
+      "Adds a tool to the stack — only worth it if release complexity justifies it"
+    ],
+    compliance: "Octopus's audit logs, RBAC, and Runbook approval flows are designed for regulated industries. SOC 2 and ISO 13485 audits go smoother when every deployment and every ops action is captured with who-did-what-when."
+  },
+  appinsights: {
+    name: "Azure Monitor + Application Insights",
+    altName: "observability layer",
+    category: "After · 2026 · observability",
+    era: "after",
+    new: true,
+    summary: "Application Insights instrumented into the App Service for distributed tracing, dependency monitoring, custom metrics, and live application telemetry. Azure Monitor for infrastructure metrics and alerting.",
+    role: "The 2022 architecture had limited observability — basic App Service logs and not much else. The 2026 version adds Application Insights for application-level telemetry (requests, dependencies, exceptions, custom events) and Azure Monitor for infrastructure-level metrics with alerting. For a regulated B2B SaaS workload, this telemetry is essential for both operational stability and the audit story.",
+    talking: [
+      "Application Insights = APM for Azure-native workloads — built into the App Service runtime",
+      "Azure Monitor = infrastructure metrics, log queries (KQL), alerting",
+      "New Relic alternative: pick one APM, don't run both unless you need cross-cloud",
+      "For Azure-only workloads, Application Insights is the lowest-friction choice",
+      "Live Metrics stream gives near-real-time visibility during deployments"
+    ]
+  },
+  staging: {
+    name: "Staging + Production Slots",
+    altName: "preserved · zero-downtime swaps",
+    category: "Preserved from before",
+    era: "both",
+    summary: "The slot-swap pattern from the original architecture is preserved — deploy to staging slot, validate against production traffic shape, then swap with production for instant cutover.",
+    role: "This is the one piece of the original architecture that didn't need to change. Slot swaps remain the cleanest zero-downtime pattern for Azure App Service. The difference now is that the slots themselves are provisioned via Bicep (not Portal), and Octopus orchestrates the swap as part of its release process. Same pattern, more automated execution.",
+    talking: [
+      "Slot swaps haven't been superseded — still the right pattern for App Service",
+      "Provisioned via Bicep IaC, not created in the Portal",
+      "Octopus can orchestrate the swap with its own deployment step",
+      "Smoke tests run against the staging slot before swap is invoked",
+      "Alternative for new builds: container apps with revision-based deployment"
+    ]
+  }
+};
+
+/* =====================================================================
+   STEP-BY-STEP MODERN PIPELINE
+   ===================================================================== */
+const PIPELINE_STEPS = [
+  {
+    title: "Developer pushes code",
+    tech: "VS Code · Azure Repos · Git",
+    desc: "Developer commits Windchill customization or .NET solution change. Push to a feature branch in Azure Repos. Branch policy requires PR + review before merge to main.",
+    status: "changed"
+  },
+  {
+    title: "YAML pipeline triggers automatically",
+    tech: "azure-pipelines.yml · multi-stage",
+    desc: "Single YAML file defines build, test, and all deployment stages. Pipeline runs as code, with template includes for reusable stages. No GUI configuration, no JSON export — the pipeline is the file.",
+    status: "new"
+  },
+  {
+    title: "Build, test, package",
+    tech: "Restore · Build · Unit Tests · Package",
+    desc: "Standard build steps preserved from the original architecture — get source, restore dependencies, build .NET solution, run unit tests, package artifacts. Pipeline templates make this reusable across projects.",
+    status: "kept"
+  },
+  {
+    title: "Bicep what-if + deploy",
+    tech: "Bicep · az deployment what-if · az deployment create",
+    desc: "Pipeline runs az deployment what-if to preview infrastructure changes, then az deployment create to apply them. App Service, deployment slots, App Insights, networking all provisioned or updated as code in this same pipeline run.",
+    status: "new"
+  },
+  {
+    title: "Hand off to Octopus Deploy",
+    tech: "OctopusDeployReleaseTenanted@6",
+    desc: "Pipeline creates a release in Octopus Deploy with the build artifacts. Octopus picks up the release process from here — handling variable substitution, environment promotion, and the actual deployment steps.",
+    status: "new"
+  },
+  {
+    title: "Deploy to Dev environment",
+    tech: "Octopus Deploy · Dev environment",
+    desc: "Octopus deploys to the Dev environment. Tenant-specific variables (connection strings, feature flags, customer-specific config) substituted from Octopus's variable store rather than scattered across pipeline YAML.",
+    status: "changed"
+  },
+  {
+    title: "Automated tests run",
+    tech: "Katalon TestOps · Playwright",
+    desc: "Test suites execute against Dev. Results posted back to Azure DevOps and linked to the originating work items. Same Katalon integration pattern from the original architecture, optionally augmented with Playwright for newer test coverage.",
+    status: "kept"
+  },
+  {
+    title: "Promote to QA (gated)",
+    tech: "Octopus Deploy · approval gate",
+    desc: "Manual approval gate. QA lead approves the promotion. Octopus runs the same deployment process against the QA environment with QA-specific variable values.",
+    status: "kept"
+  },
+  {
+    title: "Deploy to Production staging slot",
+    tech: "Octopus Deploy · Azure App Service · slot",
+    desc: "Production deployment goes to the staging slot first, never directly to production. Octopus runs smoke tests against the staging slot.",
+    status: "kept"
+  },
+  {
+    title: "Slot swap → live",
+    tech: "Azure App Service slot swap",
+    desc: "Once staging-slot smoke tests pass, Octopus invokes the slot swap. Cutover is instant; the previous production version becomes the new staging slot, available for instant rollback if needed.",
+    status: "kept"
+  },
+  {
+    title: "Observability via Application Insights",
+    tech: "Application Insights · Azure Monitor · Live Metrics",
+    desc: "Telemetry streams to App Insights from the moment the slot swap completes. Custom dashboards show request rate, error rate, dependency latency, and key business metrics. Alerts fire to Octopus or PagerDuty if SLOs are breached.",
+    status: "new"
+  },
+  {
+    title: "Runbooks for operations",
+    tech: "Octopus Runbooks · RBAC · audit log",
+    desc: "Operational tasks (database refresh, certificate rotation, customer-tenant provisioning, scaling adjustments) are codified as Octopus Runbooks. One-click execution with RBAC controls — ops team triggers without needing portal access to production resources.",
+    status: "new"
+  }
+];
+
+/* =====================================================================
+   CHANGES — Before → After
+   ===================================================================== */
+const CHANGES = [
+  {
+    type: "kept",
+    title: "Preserved",
+    items: [
+      { new: "Azure Repos · Git source control", note: "Still the source of truth — what's in the repo is what changed" },
+      { new: "Azure Boards · work item tracking", note: "Traceability story remains — work item → commit → deploy" },
+      { new: "Azure Build Pipeline · CI", note: "But now expressed as YAML, not GUI-configured" },
+      { new: "Slot swap → zero-downtime production", note: "Pattern was already correct; just better automated" },
+      { new: "Katalon · automated testing", note: "Same tool, fewer integration limits in 2026" }
+    ]
+  },
+  {
+    type: "renamed",
+    title: "Modernized",
+    items: [
+      { old: "Eclipse IDE", new: "VS Code (with Eclipse as alternative)", note: "Most workflows; Eclipse still supported for deep PTC Windchill internals" },
+      { old: "Classic Build Pipeline (GUI)", new: "YAML multi-stage pipeline", note: "Pipeline-as-code in the repo, versioned, reviewed, diffable" },
+      { old: "Azure Artifacts", new: "Azure Artifacts or Octopus built-in feed", note: "Both work; depends on where you draw the OD boundary" }
+    ]
+  },
+  {
+    type: "added",
+    title: "Added in 2026",
+    items: [
+      { new: "Bicep IaC", note: "App Service, slots, App Insights provisioned as code (was missing in 2022)" },
+      { new: "Octopus Deploy · release orchestration", note: "Replaces Classic Release Pipelines for richer variable + tenant + runbook story" },
+      { new: "Application Insights + Azure Monitor", note: "Observability layer — APM, infrastructure metrics, alerting" },
+      { new: "Octopus Runbooks", note: "One-click ops tasks with RBAC and audit log" },
+      { new: "Tenant-aware deployments", note: "Critical for multi-customer B2B SaaS — same release, many environments" }
+    ]
+  },
+  {
+    type: "dropped",
+    title: "Retired",
+    items: [
+      { old: "Classic Release Pipelines", new: "→ Octopus Deploy + YAML stages", note: "GUI-only, no version control, no pipeline-as-code" },
+      { old: "Portal-created App Service", new: "→ Bicep-provisioned", note: "Manual portal clicks are not reproducible or auditable" },
+      { old: "Katalon version constraint workaround", new: "→ Modern Katalon native integration", note: "Original 7.5 → 8.0+ upgrade gap closed" }
+    ]
+  }
+];
+
+/* =====================================================================
+   DESIGN DECISIONS
+   ===================================================================== */
+const DECISIONS = [
+  {
+    q: "Why move from Classic Release Pipelines to Octopus Deploy?",
+    a: "Three reasons. First, **variable management at scale** — Octopus handles tenant-specific and environment-specific variables natively, where Classic Release Pipelines required custom workarounds. Second, **Runbooks** — operational tasks (restart, scale, refresh, rotate cert) become auditable, RBAC-controlled, one-click actions instead of console-driven manual ops. Third, **Tenant deployments** — for B2B SaaS with many customer environments, Octopus's Tenant model lets the same release flow deploy to dozens of customer instances with one configuration. For a 2026 modernization, that combination is hard to beat."
+  },
+  {
+    q: "Why not just stay in Azure DevOps for everything?",
+    a: "You could. YAML multi-stage pipelines have closed much of the gap with dedicated release tools, and for many teams that's enough. The pivot to Octopus pays off when release complexity grows — many tenants, many environments, many operational runbooks. For a B2B SaaS treasury management product with many customer instances, the case is strong. For a smaller workload, YAML pipelines plus Bicep alone is a defensible choice."
+  },
+  {
+    q: "Why Bicep instead of Terraform?",
+    a: "For an **Azure-only** workload, Bicep is the lowest-friction choice — first-party Microsoft tooling, native ARM compatibility, no provider downloads, no state file management headache. For **multi-cloud** workloads, Terraform wins on portability and ecosystem. The Ripple/GTreasury JD specifies Azure primary, AWS secondary — that's the case where Terraform with multi-provider modules pays off. The Smith+Nephew Windchill workload was Azure-only, so Bicep was the right call there."
+  },
+  {
+    q: "Why preserve slot swaps instead of moving to containers?",
+    a: "Slot swaps remain the cleanest zero-downtime pattern for Azure App Service, and the existing Windchill workload was architected around them. Moving to Azure Container Apps or AKS would require re-platforming the application, which is a much larger commitment than modernizing the CI/CD around it. The principle: <strong>change one variable at a time</strong>. Modernize the pipeline first, validate the team and process, then consider runtime modernization as a separate initiative."
+  },
+  {
+    q: "Why keep Katalon if Playwright is the modern standard?",
+    a: "If the team already has a working Katalon test suite, the migration cost to Playwright doesn't usually pay back quickly. Katalon's Azure DevOps integration improved in newer versions, addressing the original 7.5/8.0+ constraint. For greenfield testing, Playwright would be the default in 2026. For existing test investment, evolve in place — augment Katalon with Playwright for new coverage rather than rewrite working tests."
+  },
+  {
+    q: "How does this address the JD's \"one-click provisioning\" requirement?",
+    a: "The one-click story is: developer commits → YAML pipeline runs → Bicep provisions any missing infrastructure → application deploys → Octopus orchestrates release across environments → Runbooks handle ongoing operational tasks. The entire path from commit to running production code (and from running production code to the operational changes that follow it) is automated, reviewed in pull requests, and audited end-to-end. That's exactly the \"one-click\" / \"zero-click\" pattern the role description specifies."
+  }
+];
+
+/* =====================================================================
+   CAPABILITY CARDS
+   ===================================================================== */
+const CAPABILITIES = [
+  {
+    icon: "1",
+    title: "Pipeline-as-code",
+    desc: "YAML pipelines versioned with the application code. Every pipeline change is a reviewed PR, every change is diffable, every change is auditable. The pipeline is the file.",
+    cls: ""
+  },
+  {
+    icon: "2",
+    title: "Infrastructure-as-code",
+    desc: "Bicep (Azure-only) or Terraform (multi-cloud) modules provision every environment. One-click reproducibility, what-if previews on every PR.",
+    cls: "lavender"
+  },
+  {
+    icon: "3",
+    title: "Tenant-aware releases",
+    desc: "Octopus Deploy's Tenant model deploys the same release process across many B2B SaaS customer environments — critical for treasury platforms with many corporate clients.",
+    cls: "octopus"
+  },
+  {
+    icon: "4",
+    title: "Runbooks for operations",
+    desc: "Operational tasks codified as one-click Runbooks with RBAC and audit logs. Database refresh, certificate rotation, tenant provisioning — all without touching the Azure portal.",
+    cls: "octopus"
+  },
+  {
+    icon: "5",
+    title: "Zero-downtime releases",
+    desc: "Staging-slot deployment + atomic swap to production. Smoke tests on the staging slot before swap. Instant rollback if needed by swapping back.",
+    cls: "lavender"
+  },
+  {
+    icon: "6",
+    title: "Observability built in",
+    desc: "Application Insights for APM, Azure Monitor for infrastructure metrics, alerting tied to SLOs. Live Metrics stream during deployments shows immediate impact.",
+    cls: ""
+  },
+  {
+    icon: "7",
+    title: "Compliance-ready audit trail",
+    desc: "Every commit, pipeline run, deployment, and ops action is captured. SOC 2, ISO 13485, FDA 21 CFR Part 11, PCI — the audit story works the same way.",
+    cls: "coral"
+  },
+  {
+    icon: "8",
+    title: "Reusable across teams",
+    desc: "Pipeline templates and Bicep modules become the org's reference patterns. New services inherit the proven baseline rather than reinventing it.",
+    cls: ""
+  }
+];
+
+/* =====================================================================
+   ARCHITECTURE DIAGRAMS
+   ===================================================================== */
+function BeforeDiagram({ onServiceClick }) {
+  const nodeProps = (id, ramp = 'azure') => ({
+    className: `node-group c-${ramp}`,
+    onClick: () => onServiceClick(id),
+    role: "button",
+    tabIndex: 0,
+    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onServiceClick(id); } }
+  });
+
+  return (
+    <svg width="100%" viewBox="0 0 760 540" xmlns="http://www.w3.org/2000/svg" role="img">
+      <title>Smith+Nephew Windchill CI/CD — 2022 (Before)</title>
+      <desc>Original architecture. Click any service for details.</desc>
+      <defs>
+        <marker id="arrow-before" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </marker>
+      </defs>
+
+      {/* Developer */}
+      <g {...nodeProps('eclipse', 'amber')}>
+        <rect x="30" y="20" width="140" height="44" rx="4" />
+        <text className="svg-th" x="100" y="38" textAnchor="middle" dominantBaseline="central">Eclipse IDE</text>
+        <text className="svg-ts" x="100" y="54" textAnchor="middle" dominantBaseline="central">Developer environment</text>
+      </g>
+
+      <line x1="170" y1="42" x2="200" y2="42" className="svg-arr" markerEnd="url(#arrow-before)" />
+      <text className="svg-ts" x="185" y="34" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>push</text>
+
+      {/* Azure Repos */}
+      <g {...nodeProps('azurerepos', 'azure')}>
+        <rect x="200" y="20" width="140" height="44" rx="4" />
+        <text className="svg-th" x="270" y="38" textAnchor="middle" dominantBaseline="central">Azure Repos</text>
+        <text className="svg-ts" x="270" y="54" textAnchor="middle" dominantBaseline="central">Git source control</text>
+      </g>
+
+      <line x1="340" y1="42" x2="370" y2="42" className="svg-arr" markerEnd="url(#arrow-before)" />
+      <text className="svg-ts" x="355" y="34" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>trigger</text>
+
+      {/* Build Pipeline */}
+      <g {...nodeProps('buildpipeline', 'coral')}>
+        <rect x="370" y="20" width="170" height="44" rx="4" />
+        <text className="svg-th" x="455" y="38" textAnchor="middle" dominantBaseline="central">Azure Build Pipeline</text>
+        <text className="svg-ts" x="455" y="54" textAnchor="middle" dominantBaseline="central">Classic · CI</text>
+      </g>
+
+      <line x1="540" y1="42" x2="570" y2="42" className="svg-arr" markerEnd="url(#arrow-before)" />
+      <text className="svg-ts" x="555" y="34" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>publish</text>
+
+      {/* Azure Artifacts */}
+      <g {...nodeProps('azureartifacts', 'azure')}>
+        <rect x="570" y="20" width="150" height="44" rx="4" />
+        <text className="svg-th" x="645" y="38" textAnchor="middle" dominantBaseline="central">Azure Artifacts</text>
+        <text className="svg-ts" x="645" y="54" textAnchor="middle" dominantBaseline="central">Package storage</text>
+      </g>
+
+      <line x1="645" y1="64" x2="645" y2="92" className="svg-arr" markerEnd="url(#arrow-before)" />
+      <text className="svg-ts" x="700" y="80" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>pull</text>
+
+      {/* Build Job container */}
+      <rect x="370" y="92" width="170" height="180" rx="6" className="svg-container" />
+      <text className="svg-region-label" x="455" y="108" textAnchor="middle">BUILD JOB STEPS</text>
+      <g className="c-amber">
+        <rect x="382" y="116" width="146" height="24" rx="3" />
+        <text className="svg-th" x="455" y="128" textAnchor="middle" dominantBaseline="central">Get Source</text>
+      </g>
+      <g className="c-amber">
+        <rect x="382" y="144" width="146" height="24" rx="3" />
+        <text className="svg-th" x="455" y="156" textAnchor="middle" dominantBaseline="central">Install Tools</text>
+      </g>
+      <g className="c-amber">
+        <rect x="382" y="172" width="146" height="24" rx="3" />
+        <text className="svg-th" x="455" y="184" textAnchor="middle" dominantBaseline="central">Build Solution</text>
+      </g>
+      <g className="c-amber">
+        <rect x="382" y="200" width="146" height="24" rx="3" />
+        <text className="svg-th" x="455" y="212" textAnchor="middle" dominantBaseline="central">Run Tests</text>
+      </g>
+      <g className="c-amber">
+        <rect x="382" y="228" width="146" height="24" rx="3" />
+        <text className="svg-th" x="455" y="240" textAnchor="middle" dominantBaseline="central">Package &amp; Publish</text>
+      </g>
+
+      {/* Release Pipeline */}
+      <g {...nodeProps('releasepipeline', 'coral')}>
+        <rect x="570" y="92" width="170" height="44" rx="4" />
+        <text className="svg-th" x="655" y="110" textAnchor="middle" dominantBaseline="central">Azure Release Pipeline</text>
+        <text className="svg-ts" x="655" y="126" textAnchor="middle" dominantBaseline="central">Classic · CD</text>
+      </g>
+
+      <line x1="655" y1="136" x2="655" y2="166" className="svg-arr" markerEnd="url(#arrow-before)" />
+
+      {/* Dev Stage */}
+      <g {...nodeProps('appservice', 'azure')}>
+        <rect x="570" y="170" width="170" height="40" rx="4" />
+        <text className="svg-th" x="655" y="186" textAnchor="middle" dominantBaseline="central">Dev Stage</text>
+        <text className="svg-ts" x="655" y="200" textAnchor="middle" dominantBaseline="central">Deploy to Dev</text>
+      </g>
+
+      <line x1="655" y1="210" x2="655" y2="232" className="svg-arr" markerEnd="url(#arrow-before)" />
+      <text className="svg-ts" x="710" y="225" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>gate</text>
+
+      {/* QA Stage */}
+      <g {...nodeProps('appservice', 'azure')}>
+        <rect x="570" y="236" width="170" height="40" rx="4" />
+        <text className="svg-th" x="655" y="252" textAnchor="middle" dominantBaseline="central">QA Stage</text>
+        <text className="svg-ts" x="655" y="266" textAnchor="middle" dominantBaseline="central">Deploy to QA</text>
+      </g>
+
+      <line x1="655" y1="276" x2="655" y2="298" className="svg-arr" markerEnd="url(#arrow-before)" />
+      <text className="svg-ts" x="710" y="291" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>gate</text>
+
+      {/* Prod Stage */}
+      <g {...nodeProps('appservice', 'azure')}>
+        <rect x="570" y="302" width="170" height="60" rx="4" />
+        <text className="svg-th" x="655" y="316" textAnchor="middle" dominantBaseline="central">Prod Stage</text>
+        <text className="svg-ts" x="655" y="332" textAnchor="middle" dominantBaseline="central">Deploy → Staging Slot</text>
+        <text className="svg-ts" x="655" y="348" textAnchor="middle" dominantBaseline="central">Slot Swap</text>
+      </g>
+
+      {/* Katalon TestOps */}
+      <g {...nodeProps('katalon', 'amber')}>
+        <rect x="30" y="186" width="170" height="50" rx="4" />
+        <text className="svg-th" x="115" y="204" textAnchor="middle" dominantBaseline="central">Katalon TestOps</text>
+        <text className="svg-ts" x="115" y="220" textAnchor="middle" dominantBaseline="central">UI + API test automation</text>
+      </g>
+
+      <line x1="200" y1="210" x2="570" y2="190" className="svg-arr" strokeDasharray="4 3" markerEnd="url(#arrow-before)" />
+      <text className="svg-ts" x="380" y="180" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>tests run against deployed app</text>
+
+      {/* Azure Boards */}
+      <g {...nodeProps('azureboards', 'azure')}>
+        <rect x="30" y="92" width="170" height="50" rx="4" />
+        <text className="svg-th" x="115" y="110" textAnchor="middle" dominantBaseline="central">Azure Boards</text>
+        <text className="svg-ts" x="115" y="126" textAnchor="middle" dominantBaseline="central">Work item tracking</text>
+      </g>
+
+      <line x1="115" y1="92" x2="115" y2="64" className="svg-arr" markerEnd="url(#arrow-before)" />
+      <text className="svg-ts" x="160" y="78" style={{fill: 'var(--ink-muted)'}}>linked</text>
+
+      {/* Annotation: constraint */}
+      <rect x="30" y="395" width="710" height="60" rx="6" fill="var(--coral-50)" stroke="var(--coral-100)" strokeWidth="1" />
+      <text className="svg-region-label" x="50" y="415" style={{fill: 'var(--coral-700)'}}>KNOWN CONSTRAINTS · 2022</text>
+      <text className="svg-ts" x="50" y="432" style={{fill: 'var(--coral-700)'}}>· Pipeline configuration GUI-only, not version controlled · Katalon 7.5 lacked native Azure DevOps integration (requires 8.0+)</text>
+      <text className="svg-ts" x="50" y="446" style={{fill: 'var(--coral-700)'}}>· App Service infrastructure created in Portal · No application telemetry beyond basic App Service logs</text>
+
+      {/* Bottom annotation */}
+      <text className="svg-ts" x="380" y="495" textAnchor="middle" style={{fill: 'var(--ink-faded)', fontStyle: 'italic'}}>Smith+Nephew Windchill PLM · 2022 production architecture · led by John Carlo Cueva at CDW</text>
+    </svg>
+  );
+}
+
+function AfterDiagram({ onServiceClick }) {
+  const nodeProps = (id, ramp = 'teal') => ({
+    className: `node-group c-${ramp}`,
+    onClick: () => onServiceClick(id),
+    role: "button",
+    tabIndex: 0,
+    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onServiceClick(id); } }
+  });
+
+  return (
+    <svg width="100%" viewBox="0 0 760 580" xmlns="http://www.w3.org/2000/svg" role="img">
+      <title>Smith+Nephew Windchill CI/CD — 2026 (After)</title>
+      <desc>Modernized architecture. Click any service for details.</desc>
+      <defs>
+        <marker id="arrow-after" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </marker>
+      </defs>
+
+      {/* Developer */}
+      <g {...nodeProps('vscode', 'teal')}>
+        <rect x="30" y="20" width="140" height="44" rx="4" />
+        <text className="svg-th" x="100" y="38" textAnchor="middle" dominantBaseline="central">VS Code · Eclipse</text>
+        <text className="svg-ts" x="100" y="54" textAnchor="middle" dominantBaseline="central">Developer environment</text>
+      </g>
+
+      <line x1="170" y1="42" x2="200" y2="42" className="svg-arr" markerEnd="url(#arrow-after)" />
+      <text className="svg-ts" x="185" y="34" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>push</text>
+
+      {/* Azure Repos */}
+      <g {...nodeProps('azurerepos', 'teal')}>
+        <rect x="200" y="20" width="140" height="44" rx="4" />
+        <text className="svg-th" x="270" y="38" textAnchor="middle" dominantBaseline="central">Azure Repos</text>
+        <text className="svg-ts" x="270" y="54" textAnchor="middle" dominantBaseline="central">+ branch policy + PR</text>
+      </g>
+
+      <line x1="340" y1="42" x2="370" y2="42" className="svg-arr" markerEnd="url(#arrow-after)" />
+      <text className="svg-ts" x="355" y="34" textAnchor="middle" style={{fill: 'var(--ink-muted)'}}>trigger</text>
+
+      {/* YAML Pipeline (the big one) */}
+      <g {...nodeProps('yamlpipeline', 'teal-deep')}>
+        <rect x="370" y="20" width="350" height="44" rx="4" />
+        <text className="svg-th" x="545" y="38" textAnchor="middle" dominantBaseline="central">YAML Multi-Stage Pipeline</text>
+        <text className="svg-ts" x="545" y="54" textAnchor="middle" dominantBaseline="central">azure-pipelines.yml · build · test · deploy stages</text>
+      </g>
+      <text className="new-badge" x="710" y="14" textAnchor="end">NEW IN 2026</text>
+
+      {/* Azure Boards */}
+      <g {...nodeProps('azureboards', 'teal')}>
+        <rect x="30" y="92" width="170" height="50" rx="4" />
+        <text className="svg-th" x="115" y="110" textAnchor="middle" dominantBaseline="central">Azure Boards</text>
+        <text className="svg-ts" x="115" y="126" textAnchor="middle" dominantBaseline="central">Work item tracking</text>
+      </g>
+
+      <line x1="115" y1="92" x2="115" y2="64" className="svg-arr" markerEnd="url(#arrow-after)" />
+      <text className="svg-ts" x="160" y="78" style={{fill: 'var(--ink-muted)'}}>linked</text>
+
+      {/* Build stage box */}
+      <rect x="370" y="92" width="170" height="135" rx="6" className="svg-container" />
+      <text className="svg-region-label" x="455" y="108" textAnchor="middle">YAML BUILD STAGE</text>
+      <g className="c-teal">
+        <rect x="382" y="116" width="146" height="22" rx="3" />
+        <text className="svg-th" x="455" y="127" textAnchor="middle" dominantBaseline="central">Restore · Build</text>
+      </g>
+      <g className="c-teal">
+        <rect x="382" y="142" width="146" height="22" rx="3" />
+        <text className="svg-th" x="455" y="153" textAnchor="middle" dominantBaseline="central">Run Tests</text>
+      </g>
+      <g className="c-teal">
+        <rect x="382" y="168" width="146" height="22" rx="3" />
+        <text className="svg-th" x="455" y="179" textAnchor="middle" dominantBaseline="central">Package Artifacts</text>
+      </g>
+      <g className="c-teal">
+        <rect x="382" y="194" width="146" height="22" rx="3" />
+        <text className="svg-th" x="455" y="205" textAnchor="middle" dominantBaseline="central">Push to Octopus</text>
+      </g>
+
+      {/* Bicep IaC */}
+      <g {...nodeProps('bicep', 'lavender')}>
+        <rect x="570" y="92" width="170" height="50" rx="4" />
+        <text className="svg-th" x="655" y="110" textAnchor="middle" dominantBaseline="central">Bicep IaC</text>
+        <text className="svg-ts" x="655" y="126" textAnchor="middle" dominantBaseline="central">Provision · what-if · deploy</text>
+      </g>
+      <text className="new-badge" x="745" y="86" textAnchor="end">NEW</text>
+
+      <line x1="540" y1="115" x2="570" y2="115" className="svg-arr" strokeDasharray="3 3" markerEnd="url(#arrow-after)" />
+
+      {/* Octopus Deploy Release Process */}
+      <rect x="370" y="245" width="370" height="160" rx="6" fill="var(--octopus-100)" stroke="var(--octopus-500)" strokeWidth="1.25" />
+      <text className="svg-region-label" x="555" y="262" textAnchor="middle" style={{fill: 'var(--octopus-700)'}}>OCTOPUS DEPLOY · RELEASE PROCESS</text>
+
+      <g {...nodeProps('octopus', 'octopus')}>
+        <rect x="382" y="272" width="170" height="40" rx="4" />
+        <text className="svg-th" x="467" y="288" textAnchor="middle" dominantBaseline="central">Octopus Deploy</text>
+        <text className="svg-ts" x="467" y="302" textAnchor="middle" dominantBaseline="central">Variable · Tenant · RBAC</text>
+      </g>
+
+      <g className="c-octopus">
+        <rect x="566" y="272" width="160" height="40" rx="4" />
+        <text className="svg-th" x="646" y="288" textAnchor="middle" dominantBaseline="central">Runbooks</text>
+        <text className="svg-ts" x="646" y="302" textAnchor="middle" dominantBaseline="central">One-click ops</text>
+      </g>
+
+      <g {...nodeProps('appservice', 'teal')}>
+        <rect x="382" y="320" width="105" height="36" rx="3" />
+        <text className="svg-th" x="434" y="333" textAnchor="middle" dominantBaseline="central">Dev</text>
+        <text className="svg-ts" x="434" y="347" textAnchor="middle" dominantBaseline="central">deploy</text>
+      </g>
+      <g {...nodeProps('appservice', 'teal')}>
+        <rect x="497" y="320" width="105" height="36" rx="3" />
+        <text className="svg-th" x="549" y="333" textAnchor="middle" dominantBaseline="central">QA</text>
+        <text className="svg-ts" x="549" y="347" textAnchor="middle" dominantBaseline="central">gate · deploy</text>
+      </g>
+      <g {...nodeProps('staging', 'teal-deep')}>
+        <rect x="612" y="320" width="115" height="36" rx="3" />
+        <text className="svg-th" x="669.5" y="333" textAnchor="middle" dominantBaseline="central">Prod · Slot Swap</text>
+        <text className="svg-ts" x="669.5" y="347" textAnchor="middle" dominantBaseline="central">staging → prod</text>
+      </g>
+
+      <g {...nodeProps('katalon', 'teal')}>
+        <rect x="382" y="365" width="170" height="32" rx="3" />
+        <text className="svg-th" x="467" y="376" textAnchor="middle" dominantBaseline="central">Katalon Test Automation</text>
+        <text className="svg-ts" x="467" y="389" textAnchor="middle" dominantBaseline="central">runs after each env</text>
+      </g>
+
+      <g className="c-teal">
+        <rect x="566" y="365" width="160" height="32" rx="3" />
+        <text className="svg-th" x="646" y="376" textAnchor="middle" dominantBaseline="central">Smoke Tests</text>
+        <text className="svg-ts" x="646" y="389" textAnchor="middle" dominantBaseline="central">on staging slot</text>
+      </g>
+
+      <line x1="220" y1="225" x2="370" y2="290" className="svg-arr" strokeDasharray="3 3" markerEnd="url(#arrow-after)" />
+      <text className="svg-ts" x="245" y="225" style={{fill: 'var(--ink-muted)'}}>artifacts</text>
+
+      {/* Application Insights / Azure Monitor */}
+      <g {...nodeProps('appinsights', 'lavender')}>
+        <rect x="30" y="186" width="280" height="50" rx="4" />
+        <text className="svg-th" x="170" y="204" textAnchor="middle" dominantBaseline="central">Application Insights + Azure Monitor</text>
+        <text className="svg-ts" x="170" y="220" textAnchor="middle" dominantBaseline="central">APM · metrics · alerts · live telemetry</text>
+      </g>
+      <text className="new-badge" x="305" y="180" textAnchor="end">NEW</text>
+
+      <line x1="310" y1="200" x2="382" y2="335" className="svg-arr" strokeDasharray="3 3" markerEnd="url(#arrow-after)" />
+      <text className="svg-ts" x="320" y="240" style={{fill: 'var(--ink-muted)'}}>telemetry from prod</text>
+
+      {/* Bottom annotation */}
+      <rect x="30" y="430" width="710" height="68" rx="6" fill="var(--accent-50)" stroke="var(--accent-100)" strokeWidth="1" />
+      <text className="svg-region-label" x="50" y="450" style={{fill: 'var(--accent-700)'}}>MODERN IMPROVEMENTS · 2026</text>
+      <text className="svg-ts" x="50" y="468" style={{fill: 'var(--accent-700)'}}>· Pipeline-as-code (YAML versioned with app)  · Bicep IaC for all infrastructure  · Octopus tenant + variable + runbook story</text>
+      <text className="svg-ts" x="50" y="482" style={{fill: 'var(--accent-700)'}}>· App Insights + Azure Monitor observability  · Slot swap preserved  · Runbooks for one-click ops  · Full audit trail</text>
+
+      {/* Bottom annotation */}
+      <text className="svg-ts" x="380" y="528" textAnchor="middle" style={{fill: 'var(--ink-faded)', fontStyle: 'italic'}}>Smith+Nephew Windchill PLM · 2026 modernization · architecture by John Carlo Cueva</text>
+    </svg>
+  );
+}
+
+/* =====================================================================
+   MODAL
+   ===================================================================== */
+function ServiceModal({ serviceId, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    if (serviceId) window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [serviceId, onClose]);
+
+  useEffect(() => {
+    if (serviceId) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [serviceId]);
+
+  const s = serviceId ? SERVICES[serviceId] : null;
+  const open = Boolean(s);
+
+  const categoryClass = s?.era === 'before' ? 'before' : s?.new ? 'new' : '';
+
+  return (
+    <>
+      <div className={`modal-backdrop ${open ? 'open' : ''}`} onClick={onClose} />
+      <aside className={`modal-panel ${open ? 'open' : ''}`} aria-hidden={!open}>
+        {s && (
+          <>
+            <header className="modal-header">
+              <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+              <div className={`modal-category ${categoryClass}`}>{s.category}</div>
+              <h2 className="modal-title">
+                {s.name}
+                {s.altName && <span className="alt">{s.altName}</span>}
+              </h2>
+              <p className="modal-summary">{s.summary}</p>
+            </header>
+            <div className="modal-body">
+              <div className="modal-block">
+                <div className="modal-block-label">Role in this architecture</div>
+                <p>{s.role}</p>
+              </div>
+
+              <div className="modal-block">
+                <div className="modal-block-label">Engineering talking points</div>
+                <ul>
+                  {s.talking.map((t, i) => <li key={i}>{t}</li>)}
+                </ul>
+              </div>
+
+              {s.compliance && (
+                <div className="modal-block">
+                  <div className="modal-block-label">Compliance posture</div>
+                  <p>{s.compliance}</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </aside>
+    </>
+  );
+}
+
+/* =====================================================================
+   APP
+   ===================================================================== */
+function App() {
+  const [view, setView] = useState('after');
+  const [selectedService, setSelectedService] = useState(null);
+
+  const onServiceClick = useCallback((id) => setSelectedService(id), []);
+  const onCloseModal = useCallback(() => setSelectedService(null), []);
+
+  return (
+    <>
+      <header className="site-head">
+        <div className="wrap site-head-row">
+          <a href="#" className="brand">
+            John Carlo Cueva<span>WINDCHILL CI/CD</span>
+          </a>
+          <nav className="site-nav">
+            <a href="#diagrams">Architecture</a>
+            <a href="#changes">What changed</a>
+            <a href="#workflow">Pipeline</a>
+            <a href="#capabilities">Capabilities</a>
+            <a href="#decisions">Decisions</a>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section className="hero">
+          <div className="wrap">
+            <div className="kicker"><span className="dot"></span>B2B SaaS · DevOps · CI/CD Modernization</div>
+            <h1>Windchill PLM CI/CD — <span className="accent">from Classic to one-click.</span></h1>
+            <p className="hero-lede">
+              The Smith+Nephew Windchill PLM application is what runs the digital thread for one of the world's largest medical-device manufacturers — orthopedics, sports medicine, wound care, all governed by ISO 13485 and FDA 21 CFR Part 11. This case study walks the modernization arc from the original 2022 Azure DevOps Classic Release Pipeline architecture to a 2026 modern stack with YAML multi-stage pipelines, Bicep infrastructure-as-code, Octopus Deploy release orchestration, and end-to-end observability. The slot-swap zero-downtime pattern from the original design survives intact; everything around it gets better.
+            </p>
+            <div className="byline">
+              <strong>John Carlo Cueva</strong>
+              <span className="sep">·</span>
+              <span>Principal Cloud Architect at CDW, 2022</span>
+              <span className="sep">·</span>
+              <span className="mono">SMITH+NEPHEW · WINDCHILL PLM</span>
+              <span className="tag">B2B SaaS</span>
+            </div>
+
+            <div className="stat-band">
+              <div className="stat">
+                <div className="stat-number">25<span className="small"> devs</span></div>
+                <div className="stat-label">Team led at original delivery</div>
+              </div>
+              <div className="stat">
+                <div className="stat-number">3<span className="small"> envs</span></div>
+                <div className="stat-label">Dev · QA · Prod with slot swap</div>
+              </div>
+              <div className="stat">
+                <div className="stat-number">0<span className="small">s</span></div>
+                <div className="stat-label">Production downtime per release</div>
+              </div>
+              <div className="stat">
+                <div className="stat-number">12</div>
+                <div className="stat-label">Pipeline stages, fully automated</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="diagrams">
+          <div className="wrap">
+            <div className="section-label">
+              <span className="section-num">01</span>
+              <h2 className="section-title">Before and after</h2>
+              <span className="section-sub">click any service for details</span>
+            </div>
+
+            <div className="toggle-bar">
+              <div className="toggle" role="tablist">
+                <button
+                  className={view === 'before' ? 'active before' : ''}
+                  onClick={() => setView('before')}
+                >
+                  Before · 2022
+                </button>
+                <button
+                  className={view === 'after' ? 'active after' : ''}
+                  onClick={() => setView('after')}
+                >
+                  After · 2026
+                </button>
+                <button
+                  className={view === 'split' ? 'active split' : ''}
+                  onClick={() => setView('split')}
+                >
+                  Side-by-side
+                </button>
+              </div>
+              <div className="hint">
+                <strong>Interactive</strong>
+                <span>Click any node to see role, rationale, and engineering trade-offs.</span>
+              </div>
+            </div>
+
+            {view === 'before' && (
+              <div className="diagram-frame">
+                <div className="diagram-label before">
+                  <span className="label-pill">BEFORE</span>
+                  <span className="label-title">2022 · Classic Build + Release Pipelines · CDW engagement</span>
+                </div>
+                <div className="svg-wrap">
+                  <BeforeDiagram onServiceClick={onServiceClick} />
+                </div>
+              </div>
+            )}
+
+            {view === 'after' && (
+              <div className="diagram-frame">
+                <div className="diagram-label after">
+                  <span className="label-pill">AFTER</span>
+                  <span className="label-title">2026 · YAML + Bicep + Octopus Deploy + Application Insights</span>
+                </div>
+                <div className="svg-wrap">
+                  <AfterDiagram onServiceClick={onServiceClick} />
+                </div>
+              </div>
+            )}
+
+            {view === 'split' && (
+              <div className="diagram-frame split">
+                <div>
+                  <div className="diagram-label before">
+                    <span className="label-pill">BEFORE</span>
+                    <span className="label-title">2022</span>
+                  </div>
+                  <div className="svg-wrap">
+                    <BeforeDiagram onServiceClick={onServiceClick} />
+                  </div>
+                </div>
+                <div>
+                  <div className="diagram-label after">
+                    <span className="label-pill">AFTER</span>
+                    <span className="label-title">2026</span>
+                  </div>
+                  <div className="svg-wrap">
+                    <AfterDiagram onServiceClick={onServiceClick} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section id="changes">
+          <div className="wrap">
+            <div className="section-label">
+              <span className="section-num">02</span>
+              <h2 className="section-title">What changed</h2>
+              <span className="section-sub">2022 → 2026</span>
+            </div>
+
+            <div className="changes-grid">
+              {CHANGES.map((col, i) => (
+                <div key={i} className="change-card">
+                  <div className="change-card-head">
+                    <span className={`dot ${col.type}`}></span>
+                    {col.title}
+                  </div>
+                  <ul className="change-list">
+                    {col.items.map((item, j) => (
+                      <li key={j}>
+                        {item.old && <span className="old">{item.old}</span>}
+                        <span className="new">{item.new}</span>
+                        {item.note && <span className="note">{item.note}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="capabilities">
+          <div className="wrap">
+            <div className="section-label">
+              <span className="section-num">03</span>
+              <h2 className="section-title">What the modern pipeline delivers</h2>
+              <span className="section-sub">eight capabilities</span>
+            </div>
+
+            <div className="capabilities-grid">
+              {CAPABILITIES.map((c, i) => (
+                <div key={i} className={`cap-card ${c.cls}`}>
+                  <div className="cap-icon">{c.icon}</div>
+                  <div className="cap-title">{c.title}</div>
+                  <div className="cap-desc">{c.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow">
+          <div className="wrap">
+            <div className="section-label">
+              <span className="section-num">04</span>
+              <h2 className="section-title">The modernized pipeline</h2>
+              <span className="section-sub">commit → production in 12 stages</span>
+            </div>
+
+            <div className="pipeline">
+              {PIPELINE_STEPS.map((step, i) => (
+                <div key={i} className="pipeline-step">
+                  <div className="pipeline-num">{String(i + 1).padStart(2, '0')}</div>
+                  <div className="pipeline-body">
+                    <div className="pipeline-tech">{step.tech}</div>
+                    <div className="pipeline-title">{step.title}</div>
+                    <div className="pipeline-desc">{step.desc}</div>
+                  </div>
+                  <div className={`pipeline-status ${step.status}`}>{step.status}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="decisions">
+          <div className="wrap">
+            <div className="section-label">
+              <span className="section-num">05</span>
+              <h2 className="section-title">Design decisions worth defending</h2>
+              <span className="section-sub">the trade-offs behind each choice</span>
+            </div>
+
+            <div className="decisions-grid">
+              {DECISIONS.map((d, i) => (
+                <div key={i} className="decision-card">
+                  <div className="decision-q">{d.q}</div>
+                  <div className="decision-a" dangerouslySetInnerHTML={{__html: d.a}}></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="stack">
+          <div className="wrap">
+            <div className="section-label">
+              <span className="section-num">06</span>
+              <h2 className="section-title">Tech stack — before & after</h2>
+              <span className="section-sub">full inventory</span>
+            </div>
+            <table className="stack-table">
+              <tbody>
+                <tr><td>Source control</td><td><code>Azure Repos</code></td><td>Kept · branch protection, PR review, work item linking preserved</td></tr>
+                <tr><td>Work tracking</td><td><code>Azure Boards</code></td><td>Kept · still the work-item-to-deploy traceability layer</td></tr>
+                <tr><td>Developer IDE</td><td>Eclipse → <code>VS Code</code> (Eclipse still supported)</td><td>Modernized · most workflows; deep PTC Windchill internals still benefit from Eclipse</td></tr>
+                <tr><td>CI pipeline</td><td>Classic Build → <code>azure-pipelines.yml</code></td><td>Modernized · multi-stage YAML, versioned with the code</td></tr>
+                <tr><td>CD pipeline</td><td>Classic Release → <code>Octopus Deploy</code></td><td>Modernized · variable + tenant + runbook story</td></tr>
+                <tr><td>Infrastructure-as-code</td><td><code>Bicep</code> (Azure-only) or <code>Terraform</code> (multi-cloud)</td><td>New · the missing piece from 2022</td></tr>
+                <tr><td>Artifact storage</td><td><code>Azure Artifacts</code> + Octopus built-in feed</td><td>Kept / augmented</td></tr>
+                <tr><td>Test automation</td><td><code>Katalon TestOps</code> + optional <code>Playwright</code></td><td>Kept · version constraint resolved in newer Katalon</td></tr>
+                <tr><td>Runtime</td><td><code>Azure App Service</code></td><td>Kept · Bicep-provisioned instead of Portal-created</td></tr>
+                <tr><td>Zero-downtime</td><td>Staging + Production slots · slot swap</td><td>Kept · pattern was already correct</td></tr>
+                <tr><td>Observability</td><td><code>Application Insights</code> + <code>Azure Monitor</code></td><td>New · APM + infrastructure metrics + alerting</td></tr>
+                <tr><td>Operations</td><td><code>Octopus Runbooks</code></td><td>New · one-click ops with RBAC + audit log</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="gallery">
+          <div className="wrap">
+            <div className="section-label">
+              <span className="section-num">07</span>
+              <h2 className="section-title">Reference diagrams</h2>
+              <span className="section-sub">original architecture artifacts</span>
+            </div>
+
+            <div className="gallery-grid">
+              <figure className="gallery-item">
+                <img src="./assets/before-diagram.png" alt="Original 2022 Smith+Nephew Windchill DevOps architecture" loading="lazy" />
+                <figcaption className="gallery-caption">
+                  <strong>The original 2022 architecture</strong>
+                  Hand-drawn Cognizant + SmithNephew architecture diagram showing the Classic Build + Release pipeline pattern, Katalon TestOps integration, App Service + slot swap, and the Eclipse → Azure Repos developer path. Known constraints (Katalon 7.5 integration limits) explicitly called out.
+                </figcaption>
+              </figure>
+              <figure className="gallery-item">
+                <img src="./assets/one-click-pipeline.jpg" alt="One-click CI/CD pipeline pattern" loading="lazy" />
+                <figcaption className="gallery-caption">
+                  <strong>One-click pipeline pattern</strong>
+                  The "Git push → Build → Bicep → Octopus → Azure App Service" pattern at the heart of the modernization. Same shape transfers to any B2B SaaS deployment in Azure — exactly the pattern the Ripple/GTreasury Staff Cloud Infrastructure Engineer JD describes.
+                </figcaption>
+              </figure>
+              <figure className="gallery-item">
+                <img src="./assets/after-diagram.jpg" alt="Modern 2026 Azure + Octopus Deploy CI/CD pipeline" loading="lazy" />
+                <figcaption className="gallery-caption">
+                  <strong>Modern Azure + Octopus Deploy CI/CD (2026)</strong>
+                  The full target-state architecture. Developer (VS Code or Eclipse) → Azure Repos → Azure Build Pipeline (YAML) → Octopus Deploy Release Process (Dev → QA → Prod with slot swap) → Azure App Service. Application Insights instrumented across all environments. Bicep IaC manually triggered for environment provisioning.
+                </figcaption>
+              </figure>
+              <figure className="gallery-item">
+                <img src="./assets/before-diagram.png" alt="Original 2022 architecture (detail)" loading="lazy" />
+                <figcaption className="gallery-caption">
+                  <strong>Why this matters for Ripple / GTreasury</strong>
+                  The Staff Cloud Infrastructure Engineer JD specifies one-click provisioning, Terraform module mastery, B2B SaaS experience, Octopus Deploy familiarity, and observability via New Relic or equivalent. This case study covers each of those bases with a real production system at a Fortune 500 medical-device company.
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+
+        <section id="about">
+          <div className="wrap">
+            <div className="section-label">
+              <span className="section-num">08</span>
+              <h2 className="section-title">About this project</h2>
+              <span className="section-sub">context and what it demonstrates</span>
+            </div>
+
+            <div className="about-grid">
+              <aside className="about-aside">
+                Client · <strong>Smith+Nephew</strong><br/>
+                Application · <strong>Windchill PLM</strong><br/>
+                Original · 2022<br/>
+                Modernized · 2026<br/>
+                Cloud · <strong>Azure</strong><br/>
+                Stack · App Service + slots<br/>
+                Compliance · ISO 13485 · 21 CFR<br/>
+                Team led · 25 engineers
+              </aside>
+              <div className="about-body">
+                <p>
+                  Smith+Nephew is a <strong>$6.1 billion FTSE 100 medical device manufacturer</strong> with 18,000 employees across 100+ countries, building the orthopedics, sports medicine, and advanced wound care products that go into actual human bodies. PTC Windchill is their PLM — the system that holds product designs, change records, regulatory submissions, and the digital thread that connects all of it. Every change to that system has to be defensible to an FDA auditor.
+                </p>
+                <p>
+                  The 2022 work was led during my CDW engagement, supporting the Smith+Nephew Windchill team's DevOps modernization — moving from manual deployments to automated Azure DevOps Classic pipelines with Dev/QA/Prod stages, slot-swap zero-downtime production releases, and Katalon-integrated automated testing. <strong>The architecture was sound for its time;</strong> the modernization here is about everything that's evolved since: pipeline-as-code (YAML), infrastructure-as-code (Bicep or Terraform), proper release orchestration (Octopus Deploy), and full observability (Application Insights).
+                </p>
+                <p>
+                  The pattern transfers directly to <strong>B2B SaaS workloads</strong> — particularly the kind described in the Ripple / GTreasury Staff Cloud Infrastructure Engineer role. Octopus Deploy's Tenant deployments make multi-customer SaaS deployments trivial; Bicep or Terraform modules make environment provisioning reproducible; YAML pipelines make every deployment change a reviewed PR; Runbooks turn ops tasks into auditable one-click actions. <strong>For a regulated FinTech treasury platform with many customer environments, that combination is exactly what the JD specifies.</strong>
+                </p>
+                <p>
+                  Three things are worth noting for any interview conversation about this work. <strong>First, what didn't change.</strong> The slot-swap zero-downtime pattern from 2022 is preserved — it was the right call originally. The principle is: modernize what's broken, preserve what works, change one variable at a time. <strong>Second, what was missing.</strong> The 2022 architecture had a real gap in infrastructure-as-code — the App Service was created in the Portal, not as code. That gap is what Bicep closes. <strong>Third, what scales.</strong> Octopus Deploy's variable + tenant + runbook model is what scales the architecture to many customer environments — which is the leap from a single-customer PLM workload to a multi-tenant B2B SaaS treasury platform.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <div className="wrap foot-grid">
+          <p className="foot-brand">John Carlo Cueva · Principal Cloud Architect</p>
+          <p className="mono">CHICAGO · AZURE · AWS · AI</p>
+        </div>
+      </footer>
+
+      <ServiceModal serviceId={selectedService} onClose={onCloseModal} />
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
